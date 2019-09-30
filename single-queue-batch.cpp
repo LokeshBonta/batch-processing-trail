@@ -21,6 +21,19 @@ void max_size(RppiSize *Sizes, int batch_size, int *max_height, int *max_width)
     }
 }
 
+void max_roi_size(RppiROI *ROIs, int batch_size, int *max_roi_height, int *max_roi_width)
+{
+    int i;
+    *max_roi_height  = 0;
+    *max_roi_width = 0;
+    for (i=0; i<batch_size; i++){
+        if(max_height < ROI[i].height)
+            *max_roi_height = ROI[i].height;
+        if(max_roi_width < ROI[i].width)
+            *max_roi_width = ROI[i].width;
+    }
+}
+
 void roi_fill(RppiROI *ROIs, int batch_size){
     int i;
     for(i =0; i < batch_size; i++){
@@ -45,14 +58,17 @@ void get_roi_params(RppiROI *ROIs, int batch_size, unsigned int *x, unsigned int
     }
 }
 
-void size_fill(RppiSize *Sizes, int batch_size){
+void images_fill(Rpp8u **Images, RppiSize *Sizes, int batch_size, int channel){
     int i;
+    Images = (Rpp8u **) malloc(batch_size * sizeof(Rpp8u));
     for(i =0; i < batch_size-1; i++){
        Sizes[i].width = 500; 
        Sizes[i].height = 600;
+       Images[i] = (Rpp8u *) malloc (Sizes[i].height * Sizes[i].width * channel);
     }   
     Sizes[batch_size-1].width  = 1000;
     Sizes[batch_size-1].height = 1000;
+    Images[batch_size - 1] = (Rpp8u *) malloc (Sizes[batch_size - 1].height * Sizes[batch_size - 1].width * channel);
 }
 
 
