@@ -54,24 +54,31 @@ __kernel void brightness_contrast(  __global unsigned char* input,
 
 __kernel void brightness_contrast_ROI(  __global unsigned char* input,
                                     __global unsigned char* output,
-                                    const float alpha,
-                                    const float beta,
-                                    const int x1,
-                                    const int y1,
-                                    const int roi_height,
-                                    const int roi_width,
-                                    const unsigned int height,
-                                    const unsigned int width,
-                                    const unsigned int channel,
+                                    __global float *alpha,
+                                    __global float *beta,
+                                    __global int *xroi_begin,
+                                    __global int *yroi_begin,
+                                    __global int *roi_height,
+                                    __global int *roi_width,
+                                    __global unsigned int *height,
+                                    __global unsigned int *width,
+                                    unsigned int batchsize,
+                                    unsigned int channel,
                                     const ushort pln
 )
 {
     int id_x = get_global_id(0);
     int id_y = get_global_id(1);
     int id_z = get_global_id(2);
-    int x2, y2;
-    x2 = x1 + roi_width - 1;
-    y2 = y1 + roi_height  - 1;
+
+    int xroi_end, yroi_end;
+    xroi_end[id_z] = xroi_begin[id_z] + xroi_width[id_z] - 1;
+    yroi_end[id_z] = yroi_begin[id_z] + yroi_height[id_z] - 1;
+
+    int batch_index = 0;
+    int i;
+    for(i =0; i < id_z; i++)
+        batch_index += height[i] * width[i] * channel; 
    
    // int pixIdx = batch_index+ id_x + id_y * width + id_z * width * height;
     if(pln)
