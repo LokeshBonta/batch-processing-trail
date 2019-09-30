@@ -3,13 +3,31 @@
 #include <CL/cl.hpp>
 #include"rppdefs.h"
 
-
 #define C L_USE_DEPRECATED_OPENCL_1_2_APIS
-
 
 using namespace std;
 #define MAX_SIZE 8096
 
+int read_file(unsigned char **output, size_t *size, const char *name) {
+  FILE* fp = fopen(name, "rb");
+  if (!fp) {
+    return -1;
+  }
+
+  fseek(fp, 0, SEEK_END);
+  *size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  *output = (unsigned char *)malloc(*size);
+  if (!*output) {
+    fclose(fp);
+    return -1;
+  }
+
+  fread(*output, *size, 1, fp);
+  fclose(fp);
+  return 0;
+}
 
 int main(int argc, char** argv){
     
@@ -41,6 +59,12 @@ int main(int argc, char** argv){
     cl_int err;
  
     
+    // Create program
+    unsigned char* program_file = NULL;
+    size_t program_size = 0;
+    read_file(&program_file, &program_size, "brightness.cl");
+
+
     // Bind to platform
     err = clGetPlatformIDs(1, &cpPlatform, NULL);
  
@@ -57,7 +81,13 @@ int main(int argc, char** argv){
     d_a = clCreateBuffer(context, CL_MEM_READ_ONLY, bytes, NULL, NULL);
     //d_b = clCreateBuffer(context, CL_MEM_READ_ONLY, bytes, NULL, NULL);
     d_b = clCreateBuffer(context, CL_MEM_WRITE_ONLY, bytes, NULL, NULL);
- 
+
+    cl_program program =
+      clCreateProgramWithSource(ctx, 1, (const char **)&program_file,
+                                &program_size, &err);
+
+    err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
+    free(program_file);
  
     // Write our data set into the input array in device memory
     err = clEnqueueWriteBuffer(queue, d_a, CL_TRUE, 0,
