@@ -69,6 +69,12 @@ void images_fill(Rpp8u **Images, RppiSize *Sizes, int batch_size, int channel){
     Sizes[batch_size-1].width  = 1000;
     Sizes[batch_size-1].height = 1000;
     Images[batch_size - 1] = (Rpp8u *) malloc (Sizes[batch_size - 1].height * Sizes[batch_size - 1].width * channel);
+    int j;
+    for(j =0; j < batch_size; j++){
+        for(i=0; i < Sizes[j].height * Sizes[i].width *channel; i++){
+            Images[j][i] = i %256;
+        }
+    }
 }
 
 
@@ -109,8 +115,28 @@ int main(int argc, char** argv){
     Rpp8u *h_a;
     Rpp8u *h_b;
 
+    //Host input Images
+    Rpp8u **input_images;
+    RppiSize *Sizes;
+    int batchsize = 100;
+    int channel = 3;
+    //Image filling
+    images_fill(input_images, Sizes, batchsize, channel);
+    
+    //Setting up ROIs
+    RppiROI *ROIs;
+    roi_fill(ROIs, batchsize);
+
+    //Caclulating max-height and max-width
+    int * max_height, max_width;
+    max_size(Sizes, batchsize, max_height, max_width);
+    
+    //Cl-mem creation for the buffer
+    
+    
+
     // Allocate memory for each vector on host
-    int height, width, channel, batchsize;
+    int height, width;
     height = 1000;
     width  = 1000;
     batchsize = 100;
