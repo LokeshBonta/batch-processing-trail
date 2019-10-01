@@ -77,7 +77,13 @@ void images_fill(Rpp8u **Images, RppiSize *Sizes, int batch_size, int channel){
     }
 }
 
-
+void params_fill(float *alpha, float *beta, int batchsize){
+    int i;
+    for(i=0; i<batchsize; i++){
+        alpha[i] = 1.0;
+        betat[i] = 20.0
+    }
+}
 
 void get_size_params(RppiSize *Sizes, int batch_size, unsigned int *widths, unsigned int *heights){
     widths  = (unsigned int *)malloc(sizeof(unsigned int)* batch_size);

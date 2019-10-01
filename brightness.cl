@@ -92,7 +92,7 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
     }
    
         
-    if ((id_y >=yroi_begin[id_z]) && (id_y <=yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]))
+    if ((id_y >= yroi_begin[id_z]) && (id_y <= yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]))
     {   
         if(channel == 3)
         {
@@ -119,7 +119,8 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
     {
         if(channel == 3)
         {
-            output[pixIdx + inc] = 0;
+            output[pixIdx]         = 0;
+            output[pixIdx + inc]   = 0;
             output[pixIdx + 2*inc] = 0;
         }
         else if(channel == 1)
