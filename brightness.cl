@@ -1,8 +1,7 @@
 #define saturate_8u(value) ( (value) > 255 ? 255 : ((value) < 0 ? 0 : (value) ))
 
-unsigned int get_pln_index(unsigned int id_x, unsigned int id_y, unsigned int id_z, unsigned int width, 
-                        unsigned int height, unsigned channel){
- retrun ( id_x + id_y * width + id_z * width * height);
+unsigned int get_pln_index(unsigned int id_x, unsigned int id_y, unsigned int width){
+ retrun (id_x + id_y * width);
 }
 
 /*struct pixel{
@@ -25,13 +24,12 @@ void store_pix(unsigned char * image, int i, int j, int pln, pixel pix){
     usnigned int index =;
     //Depends on pln and pkd
 
-}
-unsigned int get_pkd_index(unsigned int id_x, unsigned int id_y, unsigned int id_z, unsigned int width, 
-                        unsigned int height, unsigned channel){
- retrun (id_z + id_x * channel + id_y * width * channel);
 }*/
+unsigned int get_pkd_index(unsigned int id_x, unsigned int id_y, unsigned int width,  unsigned channel){
+ retrun (id_x * channel + id_y * width * channel);
+}
 
-__kernel void brightness_contrast(  __global unsigned char* input,
+/*__kernel void brightness_contrast(  __global unsigned char* input,
                                     __global unsigned char* output,
                                     const float alpha,
                                     const int beta,
@@ -49,7 +47,7 @@ __kernel void brightness_contrast(  __global unsigned char* input,
 
     int res = input[pixIdx] * alpha + beta;
     output[pixIdx] = saturate_8u(res);
-}
+}*/
 
 
 __kernel void brightness_contrast_ROI(  __global unsigned char* input,
@@ -65,7 +63,7 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
                                     unsigned int batchsize,
                                     unsigned int channel,
                                     const ushort pln
-)
+                                    )
 {
     int id_x = get_global_id(0);
     int id_y = get_global_id(1);
@@ -80,20 +78,60 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
     for(i =0; i < id_z; i++)
         batch_index += height[i] * width[i] * channel; 
    
-   // int pixIdx = batch_index+ id_x + id_y * width + id_z * width * height;
-    if(pln)
-        int pixIdx = batch_index + get_pln_index(id_x, id_y, id_z, width, height, channel);
-    else
-        int pixIdx = batch_index + get_pkd_index(id_x, id_y, id_z, width, height, channel);
+    unsigned char r, g, b;
+    int res1, res2, res3;
 
-    int res;
-    //Index are in bounds in for batching
-    if ((id_y >=y1) && (id_y <=y2) && (id_x >= x1) && (id_x <= x2 ))
-    {
-        res = input[pixIdx] * alpha + beta;
-       
-        output[pixIdx] = saturate_8u(res);
+   // int pixIdx = batch_index+ id_x + id_y * width + id_z * width * height;
+    if(pln){
+        int pixIdx = batch_index + get_pln_index(id_x, id_y, width);
+        if(channel == 3){
+            r = input[pixIdx];
+            g = input[pixIdx + height * width];
+            b = input[pixIdx + 2 * height * width];
+            if ((id_y >=yroi_begin[id_z]) && (id_y <=yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]))
+            {
+                res1 = r * alpha + beta;
+                res2 = g * alpha + beta;
+                res3 = b * alpha + beta;
+                output[pixIdx] = saturate_8u(res1);
+                output[pixIdx + height * width] = saturate_8u(res2);
+                output[pixIdx + 2* height * width] = saturate_8u(res3);
+            }
+            else
+                output[pixIdx] = 0;
+                output[pixIdx + height * width] = 0;
+                output[pixIdx + 2* height * width] = 0;
+        }
+        if(channel == 1){
+            r = input[pixIdx];
+            res1 = r * alpha + beta;
+            if ((id_y >=yroi_begin[id_z]) && (id_y <=yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]))
+                output[pixIdx] = saturate_8u(res1);
+            else
+                output[pixIdx] = 0;
+        }
     }
-    else
-        output[pixIdx] = 0;
+
+    else{
+        int pixIdx = batch_index + get_pkd_index(id_x, id_y, width);
+        if(channel == 3){
+            r = input[pixIdx];
+            g = input[pixIdx + 1];
+            b = input[pixIdx + 2 ];
+            if ((id_y >=yroi_begin[id_z]) && (id_y <=yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]))
+            {
+                res1 = r * alpha + beta;
+                res2 = g * alpha + beta;
+                res3 = b * alpha + beta;
+                output[pixIdx] = saturate_8u(res1);
+                output[pixIdx + 1] = saturate_8u(res2);
+                output[pixIdx + 2] = saturate_8u(res3);
+            }
+            else
+                output[pixIdx] = 0;
+                output[pixIdx + 1] = 0;
+                output[pixIdx + 2] = 0;
+        }
+    } 
+    
 }
