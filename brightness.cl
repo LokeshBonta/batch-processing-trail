@@ -93,7 +93,7 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
             output[pixIdx + 2*inc] = saturate_8u(b * alpha[id_z] + beta[id_z]);
         }
     }
-    else
+    else if(id_y < height[id_z && id_x < width[id_z]])
     {
         output[pixIdx]         = 0;
         if(channel == 3)
