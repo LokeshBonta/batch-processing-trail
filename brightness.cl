@@ -57,10 +57,10 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
                                     __global int *xroi_begin,
                                     __global int *yroi_begin,
                                     __global int *xroi_end,
-                                    __global int *xroi_end,
+                                    __global int *yroi_end,
                                     __global unsigned int *height,
                                     __global unsigned int *width,
-                                    __global unsigned int *batchindex,
+                                    __global unsigned int *batch_index,
                                     unsigned int channel,
                                     const ushort pln
                                     )
