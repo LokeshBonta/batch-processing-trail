@@ -15,9 +15,9 @@ void max_size(RppiSize *Sizes, int batch_size, int *max_height, int *max_width)
     *max_height  = 0;
     *max_width =0;
     for (i=0; i<batch_size; i++){
-        if(max_height < Sizes[i].height)
+        if(*max_height < Sizes[i].height)
             *max_height = Sizes[i].height;
-        if(max_width < Sizes[i].width)
+        if(*max_width < Sizes[i].width)
             *max_width = Sizes[i].width;
     }
 }
@@ -28,9 +28,9 @@ void max_roi_size(RppiROI *ROIs, int batch_size, int *max_roi_height, int *max_r
     *max_roi_height  = 0;
     *max_roi_width = 0;
     for (i=0; i<batch_size; i++){
-        if(max_roi_height < ROIs[i].roiHeight)
+        if(*max_roi_height < ROIs[i].roiHeight)
             *max_roi_height = ROIs[i].roiHeight;
-        if(max_roi_width < ROIs[i].roiWidth)
+        if(*max_roi_width < ROIs[i].roiWidth)
             *max_roi_width = ROIs[i].roiWidth;
     }
 }
@@ -103,7 +103,7 @@ void get_size_params(RppiSize *Sizes, int batch_size, unsigned int *widths, unsi
     heights = (unsigned int *)malloc(sizeof(unsigned int)* batch_size);
     int i;
     for(i =0; i < batch_size; i++){
-       widths[i]  =  Sizes[i].width ;
+       widths[i]  =  Sizes[i].width;
        heights[i] =  Sizes[i].height;
     }
 }
@@ -277,6 +277,10 @@ int main(int argc, char** argv){
                                 bytes, h_b, 0, NULL, NULL );
 
     //Thread Spawning <max_width, max_heigt, batch_Size>
+    //err = clEnqueueNDRangeKernel(queue, kernel, 1, &global_offset,
+                            //    &num_elems, NULL, 2, wb_events,
+                            //    &kernel_event);
+
     
     cout << h_a[35] << endl;
     //clReleaseMemObject(d_a);
