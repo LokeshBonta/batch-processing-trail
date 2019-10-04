@@ -2,6 +2,7 @@
 #include<stdio.h>
 #include <CL/cl.hpp>
 #include"rppdefs.h"
+#include<iostream>
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 
 using namespace std;
@@ -40,7 +41,7 @@ void get_roi_dims(RppiROI *Rois, int batchsize, unsigned int *xroi_begin, unsign
         xroi_begin[i] = Rois[i].x;
         yroi_begin[i] = Rois[i].y;
         xroi_end[i] = Rois[i].x + Rois[i].roiWidth - 1;
-        xroi_end[i] = Rois[i].x + Rois[i].roiHeight -1;
+        yroi_end[i] = Rois[i].y + Rois[i].roiHeight -1;
     }
 }
 
@@ -51,7 +52,7 @@ void get_size_params(RppiSize *Sizes, int batch_size, unsigned int *widths,
     for(i =0; i < batch_size -1 ; i++){
        widths[i]  =  Sizes[i].width;
        heights[i] =  Sizes[i].height;
-       batch_index[i+1] = batch_index[i+1] + Sizes[i].height * Sizes[i].width * channel;
+       batch_index[i+1] = batch_index[i] + Sizes[i].height * Sizes[i].width * channel;
     }
     heights[batch_size -1] = Sizes[batch_size -1].height;
     widths[batch_size - 1] = Sizes[batch_size -1].width;  
@@ -98,8 +99,8 @@ void params_fill(float *alpha, float *beta, int batchsize){
 void roi_fill(RppiROI *ROIs, int batch_size){
     int i;
     for(i =0; i < batch_size; i++){
-       ROIs[i].x = i; 
-       ROIs[i].y = i;
+       ROIs[i].x = 0; 
+       ROIs[i].y = 0;
        ROIs[i].roiHeight = 100;
        ROIs[i].roiWidth  = 100;
     }
@@ -124,13 +125,14 @@ void image_fill(Rpp8u *images, int bytes){
 int main(int argc, char** argv){
     int batchsize = 100;
     int channel   =   3;
-
+    cerr<< "Start \n"<< endl;
     RppiSize *Sizes;
-    Sizes = (RppiSize *)(batchsize * sizeof(RppiSize));
-    sizes_fill(Sizes, batchsize);
+    Sizes = (RppiSize *)malloc(batchsize * sizeof(RppiSize));
+    if(Sizes != NULL)
+        sizes_fill(Sizes, batchsize);
 
     RppiROI *ROIs;
-    ROIs = (RppiROI *)(batchsize * sizeof(RppiROI));
+    ROIs = (RppiROI *)malloc(batchsize * sizeof(RppiROI));
     roi_fill(ROIs, batchsize);
 
     //Getting Size arrays
@@ -139,6 +141,7 @@ int main(int argc, char** argv){
     heights = (unsigned int *)malloc(sizeof(unsigned int)* batchsize);
     batch_index = (unsigned int *)malloc(sizeof(unsigned int)* batchsize);
     get_size_params(Sizes,batchsize,widths,heights,batch_index,channel);
+       
     //
 
     // Getting ROI-Coordinates
@@ -148,19 +151,24 @@ int main(int argc, char** argv){
     yroi_begin = (unsigned int *)malloc(sizeof(int) * batchsize);
     yroi_end = (unsigned int *)malloc(sizeof(int) * batchsize);
     get_roi_dims(ROIs, batchsize, xroi_begin, xroi_end, yroi_begin, yroi_end);
+    
     //
 
-    // Filling the params
+   // Filling the params
     float *alpha, *beta;
     alpha = (float *)malloc(sizeof(float) * batchsize);
     beta  = (float *)malloc(sizeof(float) * batchsize);
     params_fill(alpha, beta, batchsize);
+     int i = 0;
+
     //
-    Rpp8u *images;
+    Rpp8u *images, *output;
     int bytes;
     bytes = calculate_bytes(Sizes, batchsize, channel);
+    //cout<<bytes<<endl;
     images = (Rpp8u *)malloc(sizeof(Rpp8u) * bytes);
     image_fill(images, bytes);
+    output = (Rpp8u *)malloc(sizeof(Rpp8u) * bytes);
 
     cl_mem d_input, d_output;
     cl_mem d_alpha, d_beta, d_xroi_begin, d_xroi_end,d_yroi_begin, d_yroi_end, d_height, 
@@ -236,7 +244,7 @@ int main(int argc, char** argv){
                                 NULL, NULL);
     err = clEnqueueWriteBuffer(queue, d_xroi_end, CL_FALSE, 0, buffer_size, xroi_end, 0,
                                 NULL, NULL);
-    err = clEnqueueWriteBuffer(queue, d_yroi_begin, CL_FALSE, 0, buffer_size, yroi_begin, 0,
+    err = clEnqueueWriteBuffer(queue, d_yroi_begin, CL_FALSE, 0, buffer_size, yroi_end, 0,
                                 NULL, NULL);
     err = clEnqueueWriteBuffer(queue, d_yroi_end, CL_FALSE, 0, buffer_size, yroi_end, 0,
                                 NULL, NULL);
@@ -260,8 +268,55 @@ int main(int argc, char** argv){
     err = clSetKernelArg(kernel, ctr++, sizeof(unsigned int), &channel);
     err = clSetKernelArg(kernel, ctr++, sizeof(ushort), &pln);
     //
-    
 
+    const size_t global_offset = 0;
+    cl_event kernel_event;
+    int max_input_width, max_input_height;
+    max_input_height = 0;
+    max_input_width = 0;
+    max_size(Sizes,batchsize,&max_input_height, &max_input_width);
+    //cout<<max_input_height<< max_input_width<<batchsize<<endl;
+
+    size_t gDim[3];
+    gDim[0] = max_input_width;
+    gDim[1] = max_input_height;
+    gDim[2] = batchsize;
+    
+    err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, gDim, NULL, 0, NULL, NULL);
+
+    // Wait until every commands are finished
+    err = clFinish(queue);
+
+    // Release the resources
+    clReleaseMemObject(d_input);
+    //clReleaseMemObject(d_output);
+    clReleaseMemObject(d_alpha);
+    clReleaseMemObject(d_beta);
+    clReleaseMemObject(d_xroi_begin);
+    clReleaseMemObject(d_xroi_end);
+    clReleaseMemObject(d_yroi_begin);
+    clReleaseMemObject(d_yroi_end);
+    clReleaseMemObject(d_height);
+    clReleaseMemObject(d_width);
+    clReleaseMemObject(d_batch_index);
+    
+    clReleaseKernel(kernel);
+    clReleaseProgram(program);
+    clReleaseCommandQueue(queue);
+    clReleaseContext(ctx);
+    clReleaseDevice(device);
+    
+    free(alpha);
+    free(beta);
+    free(xroi_begin);
+    free(xroi_end);
+    free(yroi_begin);
+    free(yroi_end);
+    free(heights);
+    free(widths);
+    free(batch_index);
+    free(images);
+    //free(ouptut);
 
     return 0;
 }
