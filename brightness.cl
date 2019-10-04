@@ -62,7 +62,8 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
                                     __global unsigned int *width,
                                     __global unsigned int *batch_index,
                                     unsigned int channel,
-                                    const ushort pln
+                                    const ushort pln,
+                                    const ushort roi
                                     )
 {
     int id_x = get_global_id(0);
@@ -72,12 +73,18 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
     int pixIdx, inc;
 
     if (pln){
-         pixIdx = batch_index[id_z] + get_pln_index(id_x, id_y, width[id_z]);
-         inc    = height[id_z]*width[id_z];
+        if(roi){
+            pixIdx = yroi_begin[id_z]*width[id_z] +  xroi_begin[id_z];
+        }
+        pixIdx += batch_index[id_z] + get_pln_index(id_x, id_y, width[id_z]);
+        inc    = height[id_z]*width[id_z];
     }
     else{
-         pixIdx = batch_index[id_z] + get_pkd_index(id_x, id_y, width[id_z], channel);
-         inc    = 1;
+        if(roi){
+            pixIdx = xroi_begin[id_z]*channel + yroi_begin[id_z] * width[id_z] * channel;
+        }
+        pixIdx += batch_index[id_z] + get_pkd_index(id_x, id_y, width[id_z], channel);
+        inc    = 1;
     }
                
      
@@ -91,17 +98,17 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
             b = input[pixIdx + 2 * inc];  
             output[pixIdx + inc] = saturate_8u(g * alpha[id_z] + beta[id_z]);
             output[pixIdx + 2*inc] = saturate_8u(b * alpha[id_z] + beta[id_z]);
-            //printf("%d", output[pixIdx]);
+            printf("%d", id_x);
         }
     }
-    else if(id_y < height[id_z && id_x < width[id_z]])
+    else if(id_y < height[id_z] && id_x < width[id_z])
     {
         output[pixIdx]         = 0;
         if(channel == 3)
         {
             output[pixIdx + inc]   = 0;
             output[pixIdx + 2*inc] = 0;
-            printf("%d", output[pixIdx]);
+            printf("%d", id_x);
         }
        
     }

@@ -251,7 +251,7 @@ int main(int argc, char** argv){
 
     // Enqueue the kernel execution command
     cl_kernel kernel = clCreateKernel(program, "brightness_contrast_ROI", &err);
-
+    ushort roi = 1;
     // Arguments Setting//
     int ctr = 0;
     err = clSetKernelArg(kernel, ctr++, sizeof(cl_mem), &d_input);
@@ -267,19 +267,28 @@ int main(int argc, char** argv){
     err = clSetKernelArg(kernel, ctr++, sizeof(cl_mem), &d_batch_index);
     err = clSetKernelArg(kernel, ctr++, sizeof(unsigned int), &channel);
     err = clSetKernelArg(kernel, ctr++, sizeof(ushort), &pln);
+    err = clSetKernelArg(kernel, ctr++, sizeof(ushort), &roi);
     //
 
     const size_t global_offset = 0;
     cl_event kernel_event;
-    int max_input_width, max_input_height;
-    max_input_height = 0;
-    max_input_width = 0;
-    max_size(Sizes,batchsize,&max_input_height, &max_input_width);
+
+    int max_width, max_height;
+    max_height = 0;
+    max_width  = 0; 
+    if(roi){
+        max_roi_size(ROIs, batchsize, &max_height, &max_width);
+    }
+    else
+    {
+        max_size(Sizes, batchsize, &max_height, &max_width);
+    }
+    
     //cout<<max_input_height<< max_input_width<<batchsize<<endl;
 
     size_t gDim[3];
-    gDim[0] = max_input_width;
-    gDim[1] = max_input_height;
+    gDim[0] = max_width;
+    gDim[1] = max_height;
     gDim[2] = batchsize;
     
     err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, gDim, NULL, 0, NULL, NULL);
