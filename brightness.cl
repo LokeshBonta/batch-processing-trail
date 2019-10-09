@@ -71,6 +71,7 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
     int id_z = get_global_id(2);
     unsigned char r, g, b;
     int pixIdx, inc;
+    int condition = 0;
 
     if (pln){
         if(roi){
@@ -86,9 +87,15 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
         pixIdx += batch_index[id_z] + get_pkd_index(id_x, id_y, width[id_z], channel);
         inc    = 1;
     }
-               
-     
-    if((id_y >= yroi_begin[id_z]) && (id_y <= yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]))
+
+    if(roi){
+        condition =  (id_y >= yroi_begin[id_z]) && (id_y <= yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]); 
+    } 
+    else{
+        condition =  (id_y >= 0) && (id_y <= (yroi_end[id_z] - yroi_end[id_z)]) && (id_x >= 0) && (id_x <= (xroi_end[id_z] - xroi_begin[id_z]); 
+    }
+
+    if(condition)
     {   
         r = input[pixIdx];
         output[pixIdx] = saturate_8u(r * alpha[id_z] + beta[id_z]);

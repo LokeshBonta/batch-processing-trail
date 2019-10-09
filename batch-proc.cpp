@@ -251,7 +251,7 @@ int main(int argc, char** argv){
 
     // Enqueue the kernel execution command
     cl_kernel kernel = clCreateKernel(program, "brightness_contrast_ROI", &err);
-    ushort roi = 1;
+    ushort roi = 0;
     // Arguments Setting//
     int ctr = 0;
     err = clSetKernelArg(kernel, ctr++, sizeof(cl_mem), &d_input);
