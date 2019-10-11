@@ -49,6 +49,9 @@ unsigned int get_pkd_index(unsigned int id_x, unsigned int id_y, unsigned int wi
     output[pixIdx] = saturate_8u(res);
 }*/
 
+unsigned char brightness( unsigned char input_pixel, double alpha, double beta){
+    return saturate_8u(alpha * input_pixel + beta);
+}
 
 __kernel void brightness_contrast_ROI(  __global unsigned char* input,
                                     __global unsigned char* output,
@@ -88,23 +91,21 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
         inc    = 1;
     }
 
-    if(roi){
-        condition =  (id_y >= yroi_begin[id_z]) && (id_y <= yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]); 
-    } 
-    else{
-        condition =  (id_y >= 0) && (id_y <= (yroi_end[id_z] - yroi_end[id_z)]) && (id_x >= 0) && (id_x <= (xroi_end[id_z] - xroi_begin[id_z]); 
-    }
+    if(roi)
+        condition =  (id_y >= 0) && (id_y <= (yroi_end[id_z] - yroi_end[id_z])) && (id_x >= 0) && (id_x <= (xroi_end[id_z] - xroi_begin[id_z])); 
+    else
+        condition =  (id_y >= yroi_begin[id_z]) && (id_y <= yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]);
 
     if(condition)
     {   
         r = input[pixIdx];
-        output[pixIdx] = saturate_8u(r * alpha[id_z] + beta[id_z]);
+        output[pixIdx] = brightness(r , alpha[id_z] , beta[id_z]);
         if(channel == 3)
         {   
             g = input[pixIdx + inc];
             b = input[pixIdx + 2 * inc];  
-            output[pixIdx + inc] = saturate_8u(g * alpha[id_z] + beta[id_z]);
-            output[pixIdx + 2*inc] = saturate_8u(b * alpha[id_z] + beta[id_z]);
+            output[pixIdx + inc] = brightness(g , alpha[id_z] , beta[id_z]);
+            output[pixIdx + 2*inc] = brightness(b , alpha[id_z] , beta[id_z]);
             printf("%d", id_x);
         }
     }
