@@ -2,6 +2,7 @@
 #include<stdio.h>
 #include <CL/cl.hpp>
 #include"rppdefs.h"
+#include <time.h>
 #include<iostream>
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 
@@ -101,16 +102,16 @@ void roi_fill(RppiROI *ROIs, int batch_size){
     for(i =0; i < batch_size; i++){
        ROIs[i].x = 0; 
        ROIs[i].y = 0;
-       ROIs[i].roiHeight = 100;
-       ROIs[i].roiWidth  = 100;
+       ROIs[i].roiHeight = 999;
+       ROIs[i].roiWidth  = 999;
     }
 }
 
 void sizes_fill(RppiSize *Sizes, int batch_size){
     int i;
     for(i =0; i < batch_size-1; i++){
-       Sizes[i].width = 500; 
-       Sizes[i].height = 600;
+       Sizes[i].width = 1000; 
+       Sizes[i].height = 1000;
     }   
     Sizes[batch_size-1].width  = 1000;
     Sizes[batch_size-1].height = 1000;
@@ -123,9 +124,9 @@ void image_fill(Rpp8u *images, int bytes){
 }
 
 int main(int argc, char** argv){
-    int batchsize = 100;
+    int batchsize = 334;
     int channel   =   3;
-    cerr<< "Start \n"<< endl;
+    cerr<< "Start \n"<< batchsize<< endl;
     RppiSize *Sizes;
     Sizes = (RppiSize *)malloc(batchsize * sizeof(RppiSize));
     if(Sizes != NULL)
@@ -178,7 +179,7 @@ int main(int argc, char** argv){
       // Allocate memory buffers (on the device)
     
 
-    unsigned short pln = 0;
+    unsigned short pln = 1;
     /* Buffers to be enqueued as cl-mems */
 
     // OpenCL Program
@@ -290,11 +291,26 @@ int main(int argc, char** argv){
     gDim[0] = max_width;
     gDim[1] = max_height;
     gDim[2] = batchsize;
-    
-    err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, gDim, NULL, 0, NULL, NULL);
 
+    clock_t start, end;
+    double time_taken;
+    
+    start = clock();
+    int iter=0;
+    for(iter=0; iter< 1; iter++){
+    err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, gDim, NULL, 0, NULL, NULL);
     // Wait until every commands are finished
+    //err = clFinish(queue);
+    err = clEnqueueReadBuffer(queue, d_output, CL_TRUE, 0, bytes, output, 1,
+                            NULL, NULL);
     err = clFinish(queue);
+
+    end = clock();
+    
+    time_taken = ((double) (end - start)) / CLOCKS_PER_SEC;
+    
+    printf("Kernel took %f seconds to execute \n", time_taken);
+    }
 
     // Release the resources
     clReleaseMemObject(d_input);

@@ -49,14 +49,10 @@ unsigned int get_pkd_index(unsigned int id_x, unsigned int id_y, unsigned int wi
     output[pixIdx] = saturate_8u(res);
 }*/
 
-unsigned char brightness( unsigned char input_pixel, double alpha, double beta){
-    return saturate_8u(alpha * input_pixel + beta);
-}
 
 __kernel void brightness_contrast_ROI(  __global unsigned char* input,
                                     __global unsigned char* output,
-                                    __global float *alpha,
-                                    __global float *beta,
+                                    
                                     __global int *xroi_begin,
                                     __global int *yroi_begin,
                                     __global int *xroi_end,
@@ -98,16 +94,30 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
 
     if(condition)
     {   
-        r = input[pixIdx];
-        output[pixIdx] = brightness(r , alpha[id_z] , beta[id_z]);
-        if(channel == 3)
-        {   
-            g = input[pixIdx + inc];
-            b = input[pixIdx + 2 * inc];  
-            output[pixIdx + inc] = brightness(g , alpha[id_z] , beta[id_z]);
-            output[pixIdx + 2*inc] = brightness(b , alpha[id_z] , beta[id_z]);
-           // printf("%d", id_x);
+        int hfFiltSz = filterSize/2;
+        if ( (id_x < hfFiltSz) || (id_y < hfFiltSz) ||
+                (id_y >= (height-hfFiltSz)) || (id_x >= (width-hfFiltSz)) )
+        {
+            output[pixIdx] = input[pixIdx];
+            return;
         }
+
+        float sum = 0.0;
+        for (int ri = (-1 * hfFiltSz) , rf = 0;
+                (ri <= hfFiltSz) && (rf < filterSize);
+                    ri++, rf++)
+        {
+            for (int ci = (-1 * hfFiltSz) , cf = 0;
+                    (ci <= hfFiltSz) && (cf < filterSize);
+                        ci++, cf++)
+            {
+                const int idxF = rf + cf * filterSize ;
+                const int idxI = pixIdx + ri + ci * width;
+                sum += filter[idxF]*input[idxI];
+            }
+        }
+        int res = (int)sum;
+        output[pixIdx] = saturate_8u(res);
     }
     else if(id_y < height[id_z] && id_x < width[id_z])
     {

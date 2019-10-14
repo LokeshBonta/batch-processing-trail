@@ -49,14 +49,14 @@ unsigned int get_pkd_index(unsigned int id_x, unsigned int id_y, unsigned int wi
     output[pixIdx] = saturate_8u(res);
 }*/
 
-unsigned char brightness( unsigned char input_pixel, double alpha, double beta){
-    return saturate_8u(alpha * input_pixel + beta);
+unsigned char blend( unsigned char input_pixel1, unsigned char input_pixel2 , double alpha){
+    return saturate_8u(alpha * input_pixel1 + (1 - alpha) * input_pixel2);
 }
 
-__kernel void brightness_contrast_ROI(  __global unsigned char* input,
+__kernel void blend_ROI(   __global unsigned char* input1,
+                                __global unsigned char* input1,
                                     __global unsigned char* output,
                                     __global float *alpha,
-                                    __global float *beta,
                                     __global int *xroi_begin,
                                     __global int *yroi_begin,
                                     __global int *xroi_end,
@@ -72,7 +72,7 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
     int id_x = get_global_id(0);
     int id_y = get_global_id(1);
     int id_z = get_global_id(2);
-    unsigned char r, g, b;
+    unsigned char r1, g1, b1, r2, g2, b2;
     int pixIdx, inc;
     int condition = 0;
 
@@ -98,14 +98,17 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
 
     if(condition)
     {   
-        r = input[pixIdx];
-        output[pixIdx] = brightness(r , alpha[id_z] , beta[id_z]);
+        r1 = input1[pixIdx];
+        r2 = input2[pixIdx];
+        output[pixIdx] = blend(r1 , r2, alpha[id_z]);
         if(channel == 3)
         {   
-            g = input[pixIdx + inc];
-            b = input[pixIdx + 2 * inc];  
-            output[pixIdx + inc] = brightness(g , alpha[id_z] , beta[id_z]);
-            output[pixIdx + 2*inc] = brightness(b , alpha[id_z] , beta[id_z]);
+            g1 = input1[pixIdx + inc];
+            g2 = input2[pixIdx + inc];
+            b1 = input1[pixIdx + 2 * inc];
+            b2 = input2[pixIdx + 2 * inc];  
+            output[pixIdx + inc]   = blend(g1 , g2, alpha[id_z]);
+            output[pixIdx + 2*inc] = blend(b1 , b2, alpha[id_z]);
            // printf("%d", id_x);
         }
     }
