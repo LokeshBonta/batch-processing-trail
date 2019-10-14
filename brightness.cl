@@ -122,3 +122,141 @@ __kernel void brightness_contrast_ROI(  __global unsigned char* input,
     }
 }
 
+
+__kernel void brightness_contrast_SS(  __global unsigned char* input,
+                                    __global unsigned char* output,
+                                    const float alpha,
+                                    const float beta,
+                                    __global int *xroi_begin,
+                                    __global int *yroi_begin,
+                                    __global int *xroi_end,
+                                    __global int *yroi_end,
+                                    const unsigned int height,
+                                    const unsigned int width,
+                                    __global unsigned int *batch_index,
+                                    unsigned int channel,
+                                    const ushort pkd,
+                                    const ushort roi
+                                    )
+{
+    int id_x = get_global_id(0);
+    int id_y = get_global_id(1);
+    int id_z = get_global_id(2);
+    unsigned char r, g, b;
+    int pixIdx, inc;
+    int condition = 0;
+
+  //  if (pkd){
+        if(roi){
+            pixIdx = xroi_begin[id_z]*channel + yroi_begin[id_z] * width * channel;
+        }
+        pixIdx += batch_index[id_z] + get_pkd_index(id_x, id_y, width, channel);
+        inc    = 1;
+    // }
+    // else{
+    //     if(roi){
+    //         pixIdx = yroi_begin[id_z]*width +  xroi_begin[id_z];
+    //     }
+    //     pixIdx += batch_index[id_z] + get_pln_index(id_x, id_y, width);
+    //     inc    = height * width;
+    // }
+
+    if(roi)
+        condition =  (id_y >= 0) && (id_y <= (yroi_end[id_z] - yroi_begin[id_z])) && (id_x >= 0) && (id_x <= (xroi_end[id_z] - xroi_begin[id_z])); 
+    else
+        condition =  (id_y >= yroi_begin[id_z]) && (id_y <= yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]);
+
+    if(condition)
+    {   
+        r = input[pixIdx];
+        output[pixIdx] = brightness(r , alpha , beta);
+        if(channel == 3)
+        {   
+            g = input[pixIdx + inc];
+            b = input[pixIdx + 2 * inc];  
+            output[pixIdx + inc] = brightness(g , alpha , beta);
+            output[pixIdx + 2*inc] = brightness(b , alpha , beta);
+           // printf("%d", id_x);
+        }
+    }
+    else if(id_y < height && id_x < width)
+    {
+        output[pixIdx]         = 0;
+        if(channel == 3)
+        {
+            output[pixIdx + inc]   = 0;
+            output[pixIdx + 2*inc] = 0;
+            //printf("%d", id_x);
+        }
+       
+    }
+}
+
+__kernel void brightness_contrast_SD(  __global unsigned char* input,
+                                    __global unsigned char* output,
+                                     const float alpha,
+                                     const float beta,
+                                    __global int *xroi_begin,
+                                    __global int *yroi_begin,
+                                    __global int *xroi_end,
+                                    __global int *yroi_end,
+                                    __global unsigned int *height,
+                                    __global unsigned int *width,
+                                    __global unsigned int *batch_index,
+                                    unsigned int channel,
+                                    const ushort pkd,
+                                    const ushort roi
+                                    )
+{
+    int id_x = get_global_id(0);
+    int id_y = get_global_id(1);
+    int id_z = get_global_id(2);
+    unsigned char r, g, b;
+    int pixIdx, inc;
+    int condition = 0;
+
+    if (pkd){
+        if(roi){
+            pixIdx = xroi_begin[id_z]*channel + yroi_begin[id_z] * width[id_z] * channel;
+        }
+        pixIdx += batch_index[id_z] + get_pkd_index(id_x, id_y, width[id_z], channel);
+        inc    = 1;
+    }
+    else{
+        if(roi){
+            pixIdx = yroi_begin[id_z]*width[id_z] +  xroi_begin[id_z];
+        }
+        pixIdx += batch_index[id_z] + get_pln_index(id_x, id_y, width[id_z]);
+        inc    = height[id_z]*width[id_z];
+    }
+
+    if(roi)
+        condition =  (id_y >= 0) && (id_y <= (yroi_end[id_z] - yroi_end[id_z])) && (id_x >= 0) && (id_x <= (xroi_end[id_z] - xroi_begin[id_z])); 
+    else
+        condition =  (id_y >= yroi_begin[id_z]) && (id_y <= yroi_end[id_z]) && (id_x >= xroi_begin[id_z]) && (id_x <= xroi_end[id_z]);
+
+    if(condition)
+    {   
+        r = input[pixIdx];
+        output[pixIdx] = brightness(r , alpha , beta);
+        if(channel == 3)
+        {   
+            g = input[pixIdx + inc];
+            b = input[pixIdx + 2 * inc];  
+            output[pixIdx + inc] = brightness(g , alpha , beta);
+            output[pixIdx + 2*inc] = brightness(b , alpha , beta);
+           // printf("%d", id_x);
+        }
+    }
+    else if(id_y < height[id_z] && id_x < width[id_z])
+    {
+        output[pixIdx]         = 0;
+        if(channel == 3)
+        {
+            output[pixIdx + inc]   = 0;
+            output[pixIdx + 2*inc] = 0;
+            //printf("%d", id_x);
+        }
+       
+    }
+}
